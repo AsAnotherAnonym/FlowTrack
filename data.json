@@ -1,0 +1,21 @@
+{
+  "transactions": [
+    {
+      "id": 2,
+      "date": "2025-12-06",
+      "title": "test",
+      "amount": 20000.0,
+      "type": "Expense",
+      "category": "asda"
+    },
+    {
+      "id": 3,
+      "date": "2025-12-06",
+      "title": "income test",
+      "amount": 50000.0,
+      "type": "Income",
+      "category": "asda"
+    }
+  ],
+  "next_id": 4
+}
