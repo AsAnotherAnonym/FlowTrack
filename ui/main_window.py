@@ -3,6 +3,8 @@ from models.finance_manager import FinanceManager
 from utils.constants import UIConstants
 from utils.helpers import DateHelper, CurrencyHelper
 from ui.components import UIComponents, TransactionCard
+from datetime import datetime
+import os
 
 class FinanceApp(ctk.CTk):
     """
@@ -40,6 +42,14 @@ class FinanceApp(ctk.CTk):
             entry.delete(0, "end")
             entry.insert(0, formatted)
 
+    def _toggle_recurrence_options(self):
+        """Enable/disable recurrence type dropdown berdasarkan checkbox status"""
+        is_recurring = self.widgets["recurring_var"].get() == 1
+        if is_recurring:
+            self.widgets["recurrence_type"].configure(state="normal")
+        else:
+            self.widgets["recurrence_type"].configure(state="disabled")
+
     # ==================== UI CREATION ====================
 
     def _create_ui(self):
@@ -55,7 +65,9 @@ class FinanceApp(ctk.CTk):
         self.right_panel.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
 
         self._create_app_title(self.left_panel)
+        self._create_action_buttons(self.left_panel)
         self._create_input_form_section(self.left_panel)
+        self._create_budget_section(self.left_panel)
         self._create_highest_expense_section(self.left_panel)
 
         self._create_header_section(self.right_panel)
@@ -64,6 +76,22 @@ class FinanceApp(ctk.CTk):
     def _create_app_title(self, parent):
         ctk.CTkLabel(parent, text="FlowTrack (alpha)", font=("Roboto", 24, "bold"),
                      text_color=UIConstants.TEXT_PRIMARY).pack(pady=(30, 20))
+
+    # ==================== ACTION BUTTONS ====================
+    def _create_action_buttons(self, parent):
+        """Tombol untuk Export dan action lainnya"""
+        button_frame = ctk.CTkFrame(parent, fg_color="transparent")
+        button_frame.pack(padx=20, fill="x", pady=(0, 15))
+        
+        export_btn = UIComponents.create_button(
+            button_frame, 
+            "📊 Export CSV", 
+            self.export_transactions,
+            style="primary",
+            height=35,
+            font=(UIConstants.FONT_FAMILY, 12, "bold")
+        )
+        export_btn.pack(fill="x", pady=5)
 
     # ==================== HEADER SECTION ====================
     def _create_header_section(self, parent):
@@ -116,6 +144,63 @@ class FinanceApp(ctk.CTk):
             text_color=UIConstants.EXPENSE_COLOR)
         self.widgets["highest_expense"].pack(fill="x", pady=(5, 0))
 
+    # ==================== BUDGET SECTION ====================
+    def _create_budget_section(self, parent):
+        """Monthly Budget Tracker dengan progress bar"""
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(padx=20, pady=(0, 20), fill="x")
+
+        ctk.CTkLabel(container, text="💰 Anggaran Bulanan",
+                     font=(UIConstants.FONT_FAMILY, 12, "bold"),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(anchor="w", pady=(0, 10))
+
+        # Budget input frame
+        input_frame = ctk.CTkFrame(container, fg_color="transparent")
+        input_frame.pack(fill="x", pady=(0, 10))
+
+        self.widgets["budget_entry"] = UIComponents.create_input_field(
+            input_frame, 
+            "Jumlah Anggaran",
+            width=150,
+            height=35
+        )
+        self.widgets["budget_entry"].pack(side="left", padx=(0, 5), fill="x", expand=True)
+
+        set_budget_btn = UIComponents.create_button(
+            input_frame,
+            "Atur",
+            self.set_monthly_budget,
+            style="primary",
+            width=60,
+            height=35,
+            font=(UIConstants.FONT_FAMILY, 12)
+        )
+        set_budget_btn.pack(side="left")
+
+        # Progress bar
+        progress_label = ctk.CTkLabel(container, text="Pengeluaran vs Anggaran:",
+                                     font=(UIConstants.FONT_FAMILY, 10),
+                                     text_color=UIConstants.TEXT_SECONDARY)
+        progress_label.pack(anchor="w", pady=(5, 2))
+        
+        self.widgets["budget_progress"] = UIComponents.create_progress_bar(
+            container,
+            value=0.0,
+            width=310,
+            height=20
+        )
+        self.widgets["budget_progress"].pack(fill="x", pady=(2, 5), padx=0)
+
+        # Status label
+        self.widgets["budget_status"] = ctk.CTkLabel(
+            container,
+            text="Anggaran belum diatur",
+            font=(UIConstants.FONT_FAMILY, 11),
+            text_color=UIConstants.TEXT_SECONDARY,
+            justify="left"
+        )
+        self.widgets["budget_status"].pack(anchor="w", pady=(5, 0))
+
     # ==================== INPUT FORM ====================
     def _create_input_form_section(self, parent):
         form_frame = ctk.CTkFrame(parent, fg_color="transparent")
@@ -151,6 +236,31 @@ class FinanceApp(ctk.CTk):
                            variable=self.widgets["type_var"], value="Expense",
                            fg_color=UIConstants.EXPENSE_COLOR).pack(side="left")
 
+        # Recurring checkbox
+        self.widgets["recurring_var"] = ctk.IntVar(value=0)
+        recurring_check = UIComponents.create_checkbox(
+            form_frame,
+            "🔄 Recurring Transaction",
+            variable=self.widgets["recurring_var"],
+            command=self._toggle_recurrence_options
+        )
+        recurring_check.pack(anchor="w", pady=5)
+
+        # Recurrence type (hidden by default)
+        self.widgets["recurrence_frame"] = ctk.CTkFrame(form_frame, fg_color="transparent")
+        self.widgets["recurrence_frame"].pack(fill="x", pady=5)
+        
+        ctk.CTkLabel(self.widgets["recurrence_frame"], text="Pilih Tipe:", font=(UIConstants.FONT_FAMILY, 12),
+                    text_color=UIConstants.TEXT_SECONDARY).pack(side="left", padx=(0, 10))
+
+        self.widgets["recurrence_type"] = UIComponents.create_combobox(
+            self.widgets["recurrence_frame"],
+            values=["weekly", "monthly"],
+            state="disabled"
+        )
+        self.widgets["recurrence_type"].set("monthly")
+        self.widgets["recurrence_type"].pack(side="left", fill="x", expand=True)
+
         UIComponents.create_button(form_frame, "Tambah Transaksi",
                                    self.add_transaction, "primary").pack(pady=20, fill="x")
 
@@ -170,6 +280,8 @@ class FinanceApp(ctk.CTk):
             amount_str = self.widgets["amount_entry"].get().replace(".", "").strip()
             trans_type = self.widgets["type_var"].get()
             category = self.widgets["category_entry"].get().strip()
+            is_recurring = self.widgets["recurring_var"].get() == 1
+            recurrence_type = self.widgets["recurrence_type"].get() if is_recurring else None
 
             if not all([date, title, category, amount_str]):
                 self._show_error("All fields are required")
@@ -180,7 +292,8 @@ class FinanceApp(ctk.CTk):
                 self._show_error("Amount must be positive")
                 return
 
-            self.manager.insert_at_head(date, title, amount, trans_type, category)
+            self.manager.insert_at_head(date, title, amount, trans_type, category,
+                                       is_recurring, recurrence_type)
             self.manager.save_to_file()
             self._clear_form()
             self.refresh_display()
@@ -189,14 +302,115 @@ class FinanceApp(ctk.CTk):
             self._show_error("Invalid amount. Please enter a number.")
 
     def delete_transaction(self, trans_id: int):
-        """
-        Delete transaction (RE-ADDED to fix error)
-        """
+        """Delete transaction"""
         node = self.manager.find_node_by_id(trans_id)
         if node:
             self.manager.delete_node(node)
             self.manager.save_to_file()
             self.refresh_display()
+
+    def edit_transaction(self, node):
+        """Open edit modal for transaction"""
+        self._open_edit_modal(node)
+
+    def export_transactions(self):
+        """Export transaksi ke CSV"""
+        try:
+            filename = f"flowtrack_export_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            if self.manager.export_to_csv(filename):
+                self._show_error(f"✓ Exported to {filename}")
+            else:
+                self._show_error("Failed to export")
+        except Exception as e:
+            self._show_error(f"Export error: {str(e)}")
+
+    def set_monthly_budget(self):
+        """Set budget untuk bulan ini"""
+        try:
+            budget_str = self.widgets["budget_entry"].get().replace(".", "").strip()
+            if not budget_str:
+                self._show_error("Please enter budget amount")
+                return
+            
+            budget = float(budget_str)
+            if budget <= 0:
+                self._show_error("Budget must be positive")
+                return
+            
+            current_month = datetime.now().strftime("%Y-%m")
+            self.manager.budget_bst.insert(current_month, budget)
+            self.widgets["budget_entry"].delete(0, "end")
+            self.refresh_display()
+        except ValueError:
+            self._show_error("Invalid budget amount")
+
+    def _open_edit_modal(self, node):
+        """Open modal window untuk edit transaction"""
+        modal = ctk.CTkToplevel(self)
+        modal.title(f"Edit Transaction - {node.title}")
+        modal.geometry("400x400")
+        modal.resizable(False, False)
+
+        # Center modal
+        modal.transient(self)
+        modal.grab_set()
+
+        # Form fields
+        form_frame = ctk.CTkFrame(modal, fg_color="transparent")
+        form_frame.pack(padx=20, pady=20, fill="both", expand=True)
+
+        ctk.CTkLabel(form_frame, text="Edit Transaction",
+                    font=UIConstants.FONT_TITLE,
+                    text_color=UIConstants.TEXT_PRIMARY).pack(pady=(0, 20), anchor="w")
+
+        # Date
+        ctk.CTkLabel(form_frame, text="Date:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
+        date_entry = UIComponents.create_input_field(form_frame, "Date")
+        date_entry.pack(fill="x", pady=5)
+        date_entry.insert(0, node.date)
+
+        # Title
+        ctk.CTkLabel(form_frame, text="Title:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
+        title_entry = UIComponents.create_input_field(form_frame, "Title")
+        title_entry.pack(fill="x", pady=5)
+        title_entry.insert(0, node.title)
+
+        # Amount
+        ctk.CTkLabel(form_frame, text="Amount:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
+        amount_entry = UIComponents.create_input_field(form_frame, "Amount")
+        amount_entry.pack(fill="x", pady=5)
+        amount_entry.insert(0, str(node.amount))
+
+        # Category
+        ctk.CTkLabel(form_frame, text="Category:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
+        category_entry = UIComponents.create_input_field(form_frame, "Category")
+        category_entry.pack(fill="x", pady=5)
+        category_entry.insert(0, node.category)
+
+        # Save button
+        def save_changes():
+            try:
+                new_date = date_entry.get().strip()
+                new_title = title_entry.get().strip()
+                new_amount = float(amount_entry.get().replace(".", "").strip())
+                new_category = category_entry.get().strip()
+
+                self.manager.update_node(node, new_date, new_title, new_amount,
+                                        category=new_category)
+                self.manager.save_to_file()
+                self.refresh_display()
+                modal.destroy()
+                self._show_error("✓ Transaction updated")
+            except ValueError:
+                self._show_error("Invalid input")
+
+        save_btn = UIComponents.create_button(
+            form_frame,
+            "Save Changes",
+            save_changes,
+            style="primary"
+        )
+        save_btn.pack(pady=20, fill="x")
 
     # ==================== UI UPDATES ====================
     def refresh_display(self):
@@ -215,6 +429,36 @@ class FinanceApp(ctk.CTk):
             self.widgets["highest_expense"].configure(
                 text="No expenses yet",
                 text_color=UIConstants.TEXT_SECONDARY)
+
+        # Update budget display
+        current_month = datetime.now().strftime("%Y-%m")
+        budget_node = self.manager.budget_bst.search(current_month)
+        if budget_node:
+            remaining = budget_node.get_remaining()
+            percentage = budget_node.get_percentage()
+            
+            # Update progress bar
+            progress_value = min(percentage / 100, 1.0)
+            self.widgets["budget_progress"].set(progress_value)
+            
+            # Update status label with color warning
+            if budget_node.is_over_budget():
+                status_color = UIConstants.EXPENSE_COLOR
+                status_text = f"⚠️ Over budget by {CurrencyHelper.format_amount(budget_node.spent - budget_node.budget_limit)}"
+            elif budget_node.is_near_limit():
+                status_color = "#FFA500"  # Orange
+                status_text = f"⚡ Near limit: {CurrencyHelper.format_amount(remaining)} remaining ({percentage:.0f}%)"
+            else:
+                status_color = UIConstants.INCOME_COLOR
+                status_text = f"✓ {CurrencyHelper.format_amount(remaining)} remaining ({percentage:.0f}%)"
+            
+            self.widgets["budget_status"].configure(text=status_text, text_color=status_color)
+        else:
+            self.widgets["budget_progress"].set(0.0)
+            self.widgets["budget_status"].configure(
+                text="No budget set",
+                text_color=UIConstants.TEXT_SECONDARY
+            )
 
         for widget in self.widgets["scrollable_frame"].winfo_children():
             widget.destroy()
@@ -245,10 +489,11 @@ class FinanceApp(ctk.CTk):
             header_label.pack(fill="x", pady=(10, 5))
 
             for node in date_groups[date_str]:
-                TransactionCard(
+                card = TransactionCard(
                     self.widgets["scrollable_frame"],
                     node,
-                    self.delete_transaction
+                    self.delete_transaction,
+                    self.edit_transaction
                 )
 
     # ==================== HELPER METHODS ====================

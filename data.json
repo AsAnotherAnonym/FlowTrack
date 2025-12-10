@@ -1,29 +1,85 @@
 {
   "transactions": [
     {
-      "id": 4,
+      "id": 12,
+      "date": "2024-12-10",
+      "title": "Test",
+      "amount": 100000,
+      "type": "Expense",
+      "category": "Test",
+      "is_recurring": true,
+      "recurrence_type": "monthly"
+    },
+    {
+      "id": 13,
       "date": "2025-12-06",
       "title": "income test",
       "amount": 50000.0,
       "type": "Income",
-      "category": "asda"
+      "category": "asda",
+      "is_recurring": false,
+      "recurrence_type": null
     },
     {
-      "id": 5,
+      "id": 14,
       "date": "2025-12-06",
       "title": "test",
       "amount": 20000.0,
       "type": "Expense",
-      "category": "asda"
+      "category": "asda",
+      "is_recurring": false,
+      "recurrence_type": null
     },
     {
-      "id": 6,
+      "id": 15,
       "date": "2025-12-08",
       "title": "makan",
       "amount": 10000.0,
       "type": "Expense",
-      "category": "barokah"
+      "category": "barokah",
+      "is_recurring": false,
+      "recurrence_type": null
+    },
+    {
+      "id": 16,
+      "date": "2025-12-10",
+      "title": "makan",
+      "amount": 15000.0,
+      "type": "Expense",
+      "category": "KFC",
+      "is_recurring": false,
+      "recurrence_type": null
+    },
+    {
+      "id": 17,
+      "date": "2025-12-10",
+      "title": "Transferan Bokap",
+      "amount": 150000.0,
+      "type": "Income",
+      "category": "Saldo Mingguan",
+      "is_recurring": false,
+      "recurrence_type": null
+    },
+    {
+      "id": 18,
+      "date": "2025-12-09",
+      "title": "jalan jalan",
+      "amount": 40000.0,
+      "type": "Expense",
+      "category": "Ke Papuma",
+      "is_recurring": false,
+      "recurrence_type": null
+    },
+    {
+      "id": 19,
+      "date": "2025-12-10",
+      "title": "Kuota",
+      "amount": 75000.0,
+      "type": "Expense",
+      "category": "Paket Internet bulanan",
+      "is_recurring": true,
+      "recurrence_type": ""
     }
   ],
-  "next_id": 8
+  "next_id": 20
 }

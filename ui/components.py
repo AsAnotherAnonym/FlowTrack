@@ -2,6 +2,7 @@ import customtkinter as ctk
 from utils.constants import UIConstants
 from utils.helpers import CurrencyHelper
 from models.transaction_node import TransactionNode
+from typing import Callable, Optional
 
 class UIComponents:
     
@@ -102,11 +103,76 @@ class UIComponents:
         }
         default_kwargs.update(kwargs)
         return ctk.CTkButton(parent, **default_kwargs)
+    
+    @staticmethod
+    def create_progress_bar(parent, value: float = 0.0, **kwargs) -> ctk.CTkProgressBar:
+        """
+        Create progress bar untuk budget tracker
+        
+        Args:
+            parent: Parent widget
+            value: Initial value (0.0-1.0)
+            **kwargs: Additional CTkProgressBar arguments
+        
+        Returns:
+            Configured CTkProgressBar
+        """
+        default_kwargs = {
+            "height": 15,
+            "corner_radius": 5
+        }
+        default_kwargs.update(kwargs)
+        bar = ctk.CTkProgressBar(parent, **default_kwargs)
+        bar.set(min(value, 1.0))  # Clamp ke 1.0
+        return bar
+    
+    @staticmethod
+    def create_checkbox(parent, text: str, variable=None, **kwargs) -> ctk.CTkCheckBox:
+        """
+        Create checkbox untuk recurring transaction
+        
+        Args:
+            parent: Parent widget
+            text: Label text
+            variable: StringVar or IntVar
+            **kwargs: Additional CTkCheckBox arguments
+        
+        Returns:
+            Configured CTkCheckBox
+        """
+        default_kwargs = {
+            "text": text,
+            "font": (UIConstants.FONT_FAMILY, 13),
+            "variable": variable
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkCheckBox(parent, **default_kwargs)
+    
+    @staticmethod
+    def create_combobox(parent, values: list, **kwargs) -> ctk.CTkComboBox:
+        """
+        Create combobox untuk recurrence type selection
+        
+        Args:
+            parent: Parent widget
+            values: List of options
+            **kwargs: Additional CTkComboBox arguments
+        
+        Returns:
+            Configured CTkComboBox
+        """
+        default_kwargs = {
+            "values": values,
+            "font": (UIConstants.FONT_FAMILY, 13),
+            "height": 40
+        }
+        default_kwargs.update(kwargs)
+        return ctk.CTkComboBox(parent, **default_kwargs)
 
 
 class TransactionCard:
 
-    def __init__(self, parent, node: TransactionNode, delete_callback):
+    def __init__(self, parent, node: TransactionNode, delete_callback, edit_callback=None):
         """
         Membuat transaction card
         
@@ -114,9 +180,11 @@ class TransactionCard:
             parent: Parent widget (usually scrollable frame)
             node: TransactionNode to display
             delete_callback: Function to call when delete is clicked
+            edit_callback: Function to call when edit is clicked
         """
         self.node = node
         self.delete_callback = delete_callback
+        self.edit_callback = edit_callback
         
         # Main card frame
         self.card = UIComponents.create_card_frame(
@@ -161,7 +229,7 @@ class TransactionCard:
         category_label.pack(anchor="w")
     
     def _create_right_section(self, parent):
-        """Jumlah dan tombol delete"""
+        """Jumlah, tombol edit dan delete"""
         right_frame = ctk.CTkFrame(parent, fg_color="transparent")
         right_frame.pack(side="right")
         
@@ -180,9 +248,36 @@ class TransactionCard:
         )
         amount_label.pack()
         
+        # Button frame
+        button_frame = ctk.CTkFrame(right_frame, fg_color="transparent")
+        button_frame.pack(pady=(3, 0))
+        
+        # Recurring badge
+        if self.node.is_recurring:
+            recurring_badge = ctk.CTkLabel(
+                button_frame,
+                text=f"🔄 {self.node.recurrence_type}",
+                font=(UIConstants.FONT_FAMILY, 9),
+                text_color=UIConstants.TEXT_SECONDARY
+            )
+            recurring_badge.pack(side="left", padx=2)
+        
+        # Edit button
+        edit_btn = ctk.CTkButton(
+            button_frame,
+            text="✎",
+            width=30,
+            height=25,
+            font=(UIConstants.FONT_FAMILY, 12),
+            fg_color=UIConstants.BUTTON_PRIMARY,
+            hover_color=UIConstants.BUTTON_PRIMARY_HOVER,
+            command=lambda: self.edit_callback(self.node) if hasattr(self, 'edit_callback') else None
+        )
+        edit_btn.pack(side="left", padx=2)
+        
         # Delete button
         delete_btn = ctk.CTkButton(
-            right_frame,
+            button_frame,
             text="✕",
             width=30,
             height=25,
@@ -191,4 +286,8 @@ class TransactionCard:
             hover_color=UIConstants.BUTTON_DANGER_HOVER,
             command=lambda: self.delete_callback(self.node.trans_id)
         )
-        delete_btn.pack(pady=(3, 0))
+        delete_btn.pack(side="left", padx=2)
+    
+    def set_edit_callback(self, callback: Callable):
+        """Set edit callback after initialization"""
+        self.edit_callback = callback

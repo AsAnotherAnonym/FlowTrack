@@ -1,0 +1,8 @@
+ID,Date,Title,Amount,Type,Category,Recurring,Recurrence Type
+12,2024-12-10,Test,100000,Expense,Test,Yes,monthly
+13,2025-12-06,income test,50000.0,Income,asda,No,-
+14,2025-12-06,test,20000.0,Expense,asda,No,-
+15,2025-12-08,makan,10000.0,Expense,barokah,No,-
+16,2025-12-10,makan,15000.0,Expense,KFC,No,-
+17,2025-12-10,Transferan Bokap,150000.0,Income,Saldo Mingguan,No,-
+18,2025-12-09,jalan jalan,40000.0,Expense,Ke Papuma,No,-
