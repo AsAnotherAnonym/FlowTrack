@@ -142,7 +142,7 @@ class FinanceApp(ctk.CTk):
         # Highest Expense
         highest_frame = ctk.CTkFrame(stats_inner, fg_color="transparent")
         highest_frame.pack(side="left", padx=15)
-        highest_lbl = ctk.CTkLabel(highest_frame, text="🔥 Tertinggi", font=(UIConstants.FONT_FAMILY, 10),
+        highest_lbl = ctk.CTkLabel(highest_frame, text="Tertinggi", font=(UIConstants.FONT_FAMILY, 12),
                                    text_color=UIConstants.TEXT_SECONDARY)
         highest_lbl.pack()
         self.widgets["highest_expense"] = ctk.CTkLabel(
