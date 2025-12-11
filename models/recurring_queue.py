@@ -101,7 +101,7 @@ class RecurringTransactionQueue:
         return due
     
     def schedule_recurring_transaction(self, node: TransactionNode, 
-                                      start_date: str = None) -> None:
+                                    start_date: str = None) -> None:
         """
         Schedule recurring transaction ke queue
         

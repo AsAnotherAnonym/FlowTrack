@@ -1,7 +1,27 @@
 {
   "transactions": [
     {
-      "id": 12,
+      "id": 50,
+      "date": "2025-12-11",
+      "title": "Bayar Uang Kos",
+      "amount": 350000.0,
+      "type": "Expense",
+      "category": "1 bulan Sekali",
+      "is_recurring": true,
+      "recurrence_type": "monthly"
+    },
+    {
+      "id": 51,
+      "date": "2025-12-11",
+      "title": "Uang Bulanan",
+      "amount": 1000000.0,
+      "type": "Income",
+      "category": "Dari Ortu",
+      "is_recurring": false,
+      "recurrence_type": null
+    },
+    {
+      "id": 52,
       "date": "2024-12-10",
       "title": "Test",
       "amount": 100000,
@@ -11,7 +31,7 @@
       "recurrence_type": "monthly"
     },
     {
-      "id": 13,
+      "id": 53,
       "date": "2025-12-06",
       "title": "income test",
       "amount": 50000.0,
@@ -21,7 +41,7 @@
       "recurrence_type": null
     },
     {
-      "id": 14,
+      "id": 54,
       "date": "2025-12-06",
       "title": "test",
       "amount": 20000.0,
@@ -31,7 +51,7 @@
       "recurrence_type": null
     },
     {
-      "id": 15,
+      "id": 55,
       "date": "2025-12-08",
       "title": "makan",
       "amount": 10000.0,
@@ -41,7 +61,7 @@
       "recurrence_type": null
     },
     {
-      "id": 16,
+      "id": 56,
       "date": "2025-12-10",
       "title": "makan",
       "amount": 15000.0,
@@ -51,7 +71,7 @@
       "recurrence_type": null
     },
     {
-      "id": 17,
+      "id": 57,
       "date": "2025-12-10",
       "title": "Transferan Bokap",
       "amount": 150000.0,
@@ -61,7 +81,7 @@
       "recurrence_type": null
     },
     {
-      "id": 18,
+      "id": 58,
       "date": "2025-12-09",
       "title": "jalan jalan",
       "amount": 40000.0,
@@ -71,7 +91,7 @@
       "recurrence_type": null
     },
     {
-      "id": 19,
+      "id": 59,
       "date": "2025-12-10",
       "title": "Kuota",
       "amount": 75000.0,
@@ -79,7 +99,17 @@
       "category": "Paket Internet bulanan",
       "is_recurring": true,
       "recurrence_type": ""
+    },
+    {
+      "id": 60,
+      "date": "2025-12-11",
+      "title": "Minum",
+      "amount": 120000.0,
+      "type": "Expense",
+      "category": "Thai Tea",
+      "is_recurring": false,
+      "recurrence_type": null
     }
   ],
-  "next_id": 20
+  "next_id": 61
 }

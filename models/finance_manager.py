@@ -51,8 +51,76 @@ class FinanceManager:
         self.total_income = 0.0
         self.total_expense = 0.0
         
+        # Month tracking untuk monthly reset
+        self.current_month = datetime.now().strftime("%Y-%m")
+        self.monthly_history = {}  # Store monthly stats: {month: {income, expense}}
+        
         # Load existing data
         self.load_from_file()
+    
+    # ==================== MONTHLY RESET CHECK ====================
+    
+    def check_and_reset_monthly(self) -> bool:
+        """
+        Check apakah bulan sudah berubah, jika iya, simpan stats bulan lalu dan reset
+        
+        Fitur reset bulanan berfungsi untuk memastikan bahwa total pemasukan dan pengeluaran 
+        yang ditampilkan aplikasi selalu merepresentasikan kondisi keuangan untuk bulan berjalan.
+        Setiap kali kalender berganti bulan (misalnya dari Desember ke Januari), aplikasi 
+        secara otomatis mendeteksi perubahan tersebut.
+        
+        Ketika bulan baru dimulai:
+        - Total pemasukan dan pengeluaran direset kembali ke nol
+        - Perhitungan cashflow dimulai dari awal tanpa bercampur dengan transaksi bulan sebelumnya
+        - Semua transaksi dan data statistik dari bulan sebelumnya tetap disimpan dalam bentuk 
+          riwayat (history), sehingga pengguna tetap dapat melihat laporan cashflow bulan-bulan 
+          sebelumnya kapan saja
+        
+        Time Complexity: O(1)
+        
+        Returns:
+            True jika ada perubahan bulan dan reset dilakukan, False jika masih bulan yang sama
+        """
+        new_month = datetime.now().strftime("%Y-%m")
+        
+        if new_month != self.current_month:
+            # Save stats dari bulan lalu ke history
+            self.monthly_history[self.current_month] = {
+                "income": self.total_income,
+                "expense": self.total_expense,
+                "balance": self.total_income - self.total_expense
+            }
+            
+            # Reset untuk bulan baru
+            self.total_income = 0.0
+            self.total_expense = 0.0
+            self.current_month = new_month
+            
+            return True
+        
+        return False
+    
+    def get_monthly_history(self, month: str = None) -> Dict:
+        """
+        Get statistik untuk bulan tertentu dari history
+        
+        Args:
+            month: Bulan dalam format YYYY-MM (default: bulan sebelumnya)
+        
+        Returns:
+            Dictionary dengan income, expense, balance untuk bulan tersebut
+        """
+        if month is None:
+            # Get bulan sebelumnya
+            from datetime import timedelta
+            last_month_date = datetime.now() - timedelta(days=30)
+            month = last_month_date.strftime("%Y-%m")
+        
+        return self.monthly_history.get(month, {
+            "income": 0.0,
+            "expense": 0.0,
+            "balance": 0.0
+        })
     
     # ==================== DLL OPERATIONS ====================
     
@@ -98,6 +166,11 @@ class FinanceManager:
             self.total_expense += amount
             # INSERT INTO MAX-HEAP
             self.expense_heap.insert(amount, new_node)
+            # UPDATE BUDGET BST
+            month_key = date[:7]  # Extract YYYY-MM from date
+            budget_node = self.budget_bst.search(month_key)
+            if budget_node:
+                budget_node.spent += amount
         
         # Schedule recurring transaction if applicable
         if is_recurring and recurrence_type:
@@ -125,6 +198,11 @@ class FinanceManager:
             self.total_income -= node.amount
         else:
             self.total_expense -= node.amount
+            # UPDATE BUDGET BST
+            month_key = node.date[:7]  # Extract YYYY-MM from date
+            budget_node = self.budget_bst.search(month_key)
+            if budget_node:
+                budget_node.spent -= node.amount
         
         # Handle DLL pointers
         if node.prev:
@@ -186,12 +264,22 @@ class FinanceManager:
                 self.total_income -= old_amount
             else:
                 self.total_expense -= old_amount
+                # Adjust budget for old amount
+                month_key = node.date[:7]
+                budget_node = self.budget_bst.search(month_key)
+                if budget_node:
+                    budget_node.spent -= old_amount
             
             # Add new statistics
             if trans_type == "Income" or (trans_type is None and old_type == "Income"):
                 self.total_income += amount
             else:
                 self.total_expense += amount
+                # Adjust budget for new amount
+                month_key = node.date[:7]
+                budget_node = self.budget_bst.search(month_key)
+                if budget_node:
+                    budget_node.spent += amount
             
             # Update amount
             node.amount = amount
@@ -200,6 +288,20 @@ class FinanceManager:
             if (old_type == "Expense" or 
                 (trans_type == "Expense" and trans_type is not None)):
                 self.expense_heap.rebuild_from_dll(self.head)
+        
+        # Handle date change (update budget if date month changed)
+        if date is not None and date != node.date:
+            old_month = node.date[:7]
+            new_month = date[:7]
+            if old_month != new_month and node.trans_type == "Expense":
+                # Remove from old month budget
+                old_budget = self.budget_bst.search(old_month)
+                if old_budget:
+                    old_budget.spent -= node.amount
+                # Add to new month budget
+                new_budget = self.budget_bst.search(new_month)
+                if new_budget:
+                    new_budget.spent += node.amount
         
         return True
     
@@ -373,7 +475,7 @@ class FinanceManager:
     
     def save_to_file(self):
         """
-        Simpan semua transaksi ke file JSON
+        Simpan semua transaksi ke file JSON termasuk monthly history
         Menelusuri DLL dan men-serialisasikan setiap node ke format kamus
         """
         transactions = []
@@ -389,7 +491,11 @@ class FinanceManager:
         
         data = {
             "transactions": transactions,
-            "next_id": self.transaction_count + 1
+            "next_id": self.transaction_count + 1,
+            "current_month": self.current_month,
+            "total_income": self.total_income,
+            "total_expense": self.total_expense,
+            "monthly_history": self.monthly_history
         }
         
         try:
@@ -403,6 +509,7 @@ class FinanceManager:
         Muat transaksi dari JSON dan melakukan rekonstruksi struktur data
         Membangun ulang DLL dan Max-Heap dari data yang disimpan
         Juga load recurring transactions ke queue
+        Restore monthly history untuk bulan-bulan sebelumnya
         """
         if not os.path.exists(self.data_file):
             return
@@ -412,6 +519,9 @@ class FinanceManager:
                 data = json.load(f)
             
             self.transaction_count = data.get("next_id", 1) - 1
+            self.current_month = data.get("current_month", datetime.now().strftime("%Y-%m"))
+            self.monthly_history = data.get("monthly_history", {})
+            
             transactions = data.get("transactions", [])
             
             # Reconstruct DLL (insert in reverse to maintain newest-first order)

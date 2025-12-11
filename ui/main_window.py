@@ -68,6 +68,7 @@ class FinanceApp(ctk.CTk):
         self._create_action_buttons(self.left_panel)
         self._create_input_form_section(self.left_panel)
         self._create_budget_section(self.left_panel)
+        self._create_monthly_history_section(self.left_panel)
         self._create_highest_expense_section(self.left_panel)
 
         self._create_header_section(self.right_panel)
@@ -116,33 +117,43 @@ class FinanceApp(ctk.CTk):
 
         # Income
         inc_frame = ctk.CTkFrame(stats_inner, fg_color="transparent")
-        inc_frame.pack(side="left", padx=20)
+        inc_frame.pack(side="left", padx=15)
         inc_lbl, inc_val = UIComponents.create_stat_display(
             inc_frame, "↓ Pemasukan", "Rp 0", UIConstants.INCOME_COLOR)
         inc_lbl.pack(); inc_val.pack()
         self.widgets["income_value"] = inc_val
 
+        # Separator
+        separator = ctk.CTkFrame(stats_inner, fg_color=UIConstants.TEXT_SECONDARY, width=1, height=40)
+        separator.pack(side="left", padx=15)
+
         # Expense
         exp_frame = ctk.CTkFrame(stats_inner, fg_color="transparent")
-        exp_frame.pack(side="left", padx=20)
+        exp_frame.pack(side="left", padx=15)
         exp_lbl, exp_val = UIComponents.create_stat_display(
             exp_frame, "↑ Pengeluaran", "Rp 0", UIConstants.EXPENSE_COLOR)
         exp_lbl.pack(); exp_val.pack()
         self.widgets["expense_value"] = exp_val
 
+        # Separator
+        separator2 = ctk.CTkFrame(stats_inner, fg_color=UIConstants.TEXT_SECONDARY, width=1, height=40)
+        separator2.pack(side="left", padx=15)
+
+        # Highest Expense
+        highest_frame = ctk.CTkFrame(stats_inner, fg_color="transparent")
+        highest_frame.pack(side="left", padx=15)
+        highest_lbl = ctk.CTkLabel(highest_frame, text="🔥 Tertinggi", font=(UIConstants.FONT_FAMILY, 10),
+                                   text_color=UIConstants.TEXT_SECONDARY)
+        highest_lbl.pack()
+        self.widgets["highest_expense"] = ctk.CTkLabel(
+            highest_frame, text="-", font=("Roboto", 13, "bold"),
+            text_color=UIConstants.EXPENSE_COLOR)
+        self.widgets["highest_expense"].pack()
+
     # ==================== HIGHEST EXPENSE ====================
     def _create_highest_expense_section(self, parent):
-        container = ctk.CTkFrame(parent, fg_color="transparent")
-        container.pack(padx=20, pady=(20, 10), fill="x", side="bottom")
-
-        ctk.CTkLabel(container, text="🔥 Highest Expense (Max-Heap)",
-                     font=(UIConstants.FONT_FAMILY, 12, "bold"),
-                     text_color=UIConstants.TEXT_SECONDARY).pack(anchor="w")
-
-        self.widgets["highest_expense"] = ctk.CTkLabel(
-            container, text="No expenses yet", font=("Roboto", 16, "bold"),
-            text_color=UIConstants.EXPENSE_COLOR)
-        self.widgets["highest_expense"].pack(fill="x", pady=(5, 0))
+        # Highest expense section dipindahkan ke header section
+        pass
 
     # ==================== BUDGET SECTION ====================
     def _create_budget_section(self, parent):
@@ -200,6 +211,28 @@ class FinanceApp(ctk.CTk):
             justify="left"
         )
         self.widgets["budget_status"].pack(anchor="w", pady=(5, 0))
+
+    # ==================== MONTHLY HISTORY SECTION ====================
+    def _create_monthly_history_section(self, parent):
+        """Menampilkan riwayat pengeluaran dan pemasukan bulan-bulan sebelumnya"""
+        container = ctk.CTkFrame(parent, fg_color="transparent")
+        container.pack(padx=20, pady=(0, 20), fill="x")
+
+        # Header
+        header_frame = ctk.CTkFrame(container, fg_color="transparent")
+        header_frame.pack(fill="x", pady=(0, 10))
+
+        ctk.CTkLabel(header_frame, text="📊 Riwayat Bulanan",
+                     font=(UIConstants.FONT_FAMILY, 12, "bold"),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(side="left", anchor="w")
+
+        # Scrollable frame untuk monthly history
+        self.widgets["monthly_history_frame"] = ctk.CTkScrollableFrame(
+            container,
+            fg_color="transparent",
+            height=150
+        )
+        self.widgets["monthly_history_frame"].pack(fill="both", expand=True, padx=0)
 
     # ==================== INPUT FORM ====================
     def _create_input_form_section(self, parent):
@@ -329,63 +362,79 @@ class FinanceApp(ctk.CTk):
         try:
             budget_str = self.widgets["budget_entry"].get().replace(".", "").strip()
             if not budget_str:
-                self._show_error("Please enter budget amount")
+                self._show_error("❌ Masukkan jumlah anggaran")
                 return
             
             budget = float(budget_str)
             if budget <= 0:
-                self._show_error("Budget must be positive")
+                self._show_error("❌ Anggaran harus lebih dari 0")
                 return
             
             current_month = datetime.now().strftime("%Y-%m")
             self.manager.budget_bst.insert(current_month, budget)
+            self.manager.save_to_file()
             self.widgets["budget_entry"].delete(0, "end")
             self.refresh_display()
+            self._show_error(f"✅ Anggaran {CurrencyHelper.format_amount(budget)} untuk bulan ini berhasil diatur")
         except ValueError:
-            self._show_error("Invalid budget amount")
+            self._show_error("❌ Masukkan angka yang valid")
 
     def _open_edit_modal(self, node):
         """Open modal window untuk edit transaction"""
         modal = ctk.CTkToplevel(self)
         modal.title(f"Edit Transaction - {node.title}")
-        modal.geometry("400x400")
+        modal.geometry("450x550")
         modal.resizable(False, False)
 
         # Center modal
         modal.transient(self)
         modal.grab_set()
 
-        # Form fields
-        form_frame = ctk.CTkFrame(modal, fg_color="transparent")
-        form_frame.pack(padx=20, pady=20, fill="both", expand=True)
+        # Main container
+        main_frame = ctk.CTkFrame(modal, fg_color="transparent")
+        main_frame.pack(padx=20, pady=20, fill="both", expand=True)
 
-        ctk.CTkLabel(form_frame, text="Edit Transaction",
+        # Title
+        title_label = ctk.CTkLabel(main_frame, text="✏️ Edit Transaction",
                     font=UIConstants.FONT_TITLE,
-                    text_color=UIConstants.TEXT_PRIMARY).pack(pady=(0, 20), anchor="w")
+                    text_color=UIConstants.TEXT_PRIMARY)
+        title_label.pack(pady=(0, 20), anchor="w")
+
+        # Form frame (scrollable untuk keamanan)
+        form_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, pady=(0, 20))
 
         # Date
-        ctk.CTkLabel(form_frame, text="Date:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
-        date_entry = UIComponents.create_input_field(form_frame, "Date")
-        date_entry.pack(fill="x", pady=5)
+        ctk.CTkLabel(form_frame, text="Tanggal:", font=(UIConstants.FONT_FAMILY, 12),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(anchor="w", pady=(0, 5))
+        date_entry = UIComponents.create_input_field(form_frame, "Tanggal")
+        date_entry.pack(fill="x", pady=(0, 10))
         date_entry.insert(0, node.date)
 
         # Title
-        ctk.CTkLabel(form_frame, text="Title:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
-        title_entry = UIComponents.create_input_field(form_frame, "Title")
-        title_entry.pack(fill="x", pady=5)
+        ctk.CTkLabel(form_frame, text="Judul:", font=(UIConstants.FONT_FAMILY, 12),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(anchor="w", pady=(0, 5))
+        title_entry = UIComponents.create_input_field(form_frame, "Judul")
+        title_entry.pack(fill="x", pady=(0, 10))
         title_entry.insert(0, node.title)
 
         # Amount
-        ctk.CTkLabel(form_frame, text="Amount:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
-        amount_entry = UIComponents.create_input_field(form_frame, "Amount")
-        amount_entry.pack(fill="x", pady=5)
+        ctk.CTkLabel(form_frame, text="Jumlah:", font=(UIConstants.FONT_FAMILY, 12),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(anchor="w", pady=(0, 5))
+        amount_entry = UIComponents.create_input_field(form_frame, "Jumlah")
+        amount_entry.pack(fill="x", pady=(0, 10))
         amount_entry.insert(0, str(node.amount))
 
         # Category
-        ctk.CTkLabel(form_frame, text="Category:", font=(UIConstants.FONT_FAMILY, 12)).pack(anchor="w")
-        category_entry = UIComponents.create_input_field(form_frame, "Category")
-        category_entry.pack(fill="x", pady=5)
+        ctk.CTkLabel(form_frame, text="Catatan:", font=(UIConstants.FONT_FAMILY, 12),
+                     text_color=UIConstants.TEXT_PRIMARY).pack(anchor="w", pady=(0, 5))
+        category_entry = UIComponents.create_input_field(form_frame, "Catatan")
+        category_entry.pack(fill="x", pady=(0, 10))
         category_entry.insert(0, node.category)
+
+        # Button frame
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(fill="x", pady=(0, 0))
 
         # Save button
         def save_changes():
@@ -394,6 +443,10 @@ class FinanceApp(ctk.CTk):
                 new_title = title_entry.get().strip()
                 new_amount = float(amount_entry.get().replace(".", "").strip())
                 new_category = category_entry.get().strip()
+
+                if not all([new_date, new_title, new_amount, new_category]):
+                    self._show_error("All fields are required")
+                    return
 
                 self.manager.update_node(node, new_date, new_title, new_amount,
                                         category=new_category)
@@ -405,15 +458,33 @@ class FinanceApp(ctk.CTk):
                 self._show_error("Invalid input")
 
         save_btn = UIComponents.create_button(
-            form_frame,
-            "Save Changes",
+            button_frame,
+            "💾 Simpan Perubahan",
             save_changes,
-            style="primary"
+            style="primary",
+            height=40,
+            font=(UIConstants.FONT_FAMILY, 12, "bold")
         )
-        save_btn.pack(pady=20, fill="x")
+        save_btn.pack(side="left", fill="both", expand=True, padx=(0, 5))
+
+        # Cancel button
+        cancel_btn = UIComponents.create_button(
+            button_frame,
+            "❌ Batal",
+            modal.destroy,
+            style="danger",
+            height=40,
+            font=(UIConstants.FONT_FAMILY, 12, "bold")
+        )
+        cancel_btn.pack(side="left", fill="both", expand=True, padx=(5, 0))
 
     # ==================== UI UPDATES ====================
     def refresh_display(self):
+        # Check dan reset monthly jika bulan berubah
+        if self.manager.check_and_reset_monthly():
+            self._show_error("🗓️ Bulan baru dimulai! Total pemasukan dan pengeluaran telah direset.")
+            self.manager.save_to_file()
+        
         stats = self.manager.get_stats()
 
         self.widgets["balance_value"].configure(text=CurrencyHelper.format_amount(stats["balance"]))
@@ -423,11 +494,11 @@ class FinanceApp(ctk.CTk):
         highest = self.manager.get_highest_expense()
         if highest:
             self.widgets["highest_expense"].configure(
-                text=f"{highest.title} - {CurrencyHelper.format_amount(highest.amount)}",
+                text=CurrencyHelper.format_amount(highest.amount),
                 text_color=UIConstants.EXPENSE_COLOR)
         else:
             self.widgets["highest_expense"].configure(
-                text="No expenses yet",
+                text="-",
                 text_color=UIConstants.TEXT_SECONDARY)
 
         # Update budget display
@@ -459,6 +530,9 @@ class FinanceApp(ctk.CTk):
                 text="No budget set",
                 text_color=UIConstants.TEXT_SECONDARY
             )
+
+        # Update Monthly History Display
+        self._refresh_monthly_history()
 
         for widget in self.widgets["scrollable_frame"].winfo_children():
             widget.destroy()
@@ -495,6 +569,84 @@ class FinanceApp(ctk.CTk):
                     self.delete_transaction,
                     self.edit_transaction
                 )
+
+    def _refresh_monthly_history(self):
+        """Update monthly history display"""
+        # Clear existing widgets
+        for widget in self.widgets["monthly_history_frame"].winfo_children():
+            widget.destroy()
+
+        # Get monthly history dari manager
+        history = self.manager.monthly_history
+        
+        if not history:
+            # Tampilkan pesan jika tidak ada history
+            empty_label = ctk.CTkLabel(
+                self.widgets["monthly_history_frame"],
+                text="Belum ada riwayat bulan sebelumnya",
+                font=(UIConstants.FONT_FAMILY, 11),
+                text_color=UIConstants.TEXT_SECONDARY
+            )
+            empty_label.pack(pady=10)
+            return
+
+        # Sort months in reverse chronological order (terbaru dulu)
+        sorted_months = sorted(history.keys(), reverse=True)
+
+        for month in sorted_months:
+            data = history[month]
+            income = data.get("income", 0.0)
+            expense = data.get("expense", 0.0)
+            balance = data.get("balance", 0.0)
+
+            # Create month card
+            month_card = ctk.CTkFrame(
+                self.widgets["monthly_history_frame"],
+                fg_color=UIConstants.CARD_BG,
+                corner_radius=8
+            )
+            month_card.pack(fill="x", pady=(0, 5), padx=0)
+
+            # Month header
+            header = ctk.CTkFrame(month_card, fg_color="transparent")
+            header.pack(fill="x", padx=10, pady=(8, 3))
+
+            ctk.CTkLabel(
+                header,
+                text=f"📅 {month}",
+                font=(UIConstants.FONT_FAMILY, 11, "bold"),
+                text_color=UIConstants.TEXT_PRIMARY
+            ).pack(side="left", anchor="w")
+
+            # Month stats
+            stats = ctk.CTkFrame(month_card, fg_color="transparent")
+            stats.pack(fill="x", padx=10, pady=(3, 8))
+
+            # Income
+            ctk.CTkLabel(
+                stats,
+                text=f"↓ Masuk: {CurrencyHelper.format_amount(income)}",
+                font=(UIConstants.FONT_FAMILY, 10),
+                text_color=UIConstants.INCOME_COLOR
+            ).pack(anchor="w", pady=(1, 0))
+
+            # Expense
+            ctk.CTkLabel(
+                stats,
+                text=f"↑ Keluar: {CurrencyHelper.format_amount(expense)}",
+                font=(UIConstants.FONT_FAMILY, 10),
+                text_color=UIConstants.EXPENSE_COLOR
+            ).pack(anchor="w", pady=(1, 0))
+
+            # Balance
+            balance_color = UIConstants.INCOME_COLOR if balance >= 0 else UIConstants.EXPENSE_COLOR
+            balance_text = f"{'✓' if balance >= 0 else '⚠️'} Net: {CurrencyHelper.format_amount(balance)}"
+            ctk.CTkLabel(
+                stats,
+                text=balance_text,
+                font=(UIConstants.FONT_FAMILY, 10, "bold"),
+                text_color=balance_color
+            ).pack(anchor="w", pady=(1, 0))
 
     # ==================== HELPER METHODS ====================
     def _clear_form(self):
